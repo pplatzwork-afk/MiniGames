@@ -3084,14 +3084,40 @@
 
 // Show WPM and score on results modal
 showResultsModal() {
-    const wpm = document.getElementById('typing-wpm').textContent;
-    const accuracy = document.getElementById('typing-accuracy').textContent;
-    const errors = document.getElementById('typing-errors').textContent;
+    // Calculate stats from current test
+    const timeElapsed = (this.endTime - this.startTime) / 1000 / 60;
+    const words = Math.max(this.totalCorrectChars / 5, 0);
+    const wpm = timeElapsed > 0 ? Math.round(words / timeElapsed) : 0;
+    const accuracy = this.totalTypedChars > 0 ? Math.round((this.totalCorrectChars / this.totalTypedChars) * 100) : 100;
+    const errors = this.totalErrors;
+    // Save stats to leaderboard
+    const duration = parseInt(document.getElementById('typing-duration').value);
+    const diffStats = gameStats.data.typing[duration];
+    const overallStats = gameStats.data.typing.overall;
+    const timePlayed = this.endTime - this.startTime;
+    gameStats.updateGame('typing', {
+        difficulty: {
+            gamesPlayed: diffStats.gamesPlayed + 1,
+            bestWPM: Math.max(diffStats.bestWPM, wpm),
+            bestAccuracy: Math.max(diffStats.bestAccuracy, accuracy),
+            totalTime: diffStats.totalTime + timePlayed,
+            tests: [...diffStats.tests.slice(-19), { wpm, accuracy }]
+        },
+        overall: {
+            gamesPlayed: overallStats.gamesPlayed + 1,
+            bestWPM: Math.max(overallStats.bestWPM, wpm),
+            bestAccuracy: Math.max(overallStats.bestAccuracy, accuracy),
+            totalTime: overallStats.totalTime + timePlayed,
+            tests: [...overallStats.tests.slice(-19), { wpm, accuracy }]
+        },
+        timePlayed: timePlayed
+    }, duration);
+    // Show modal
     const modal = document.getElementById('game-modal');
     const scoreElem = document.getElementById('modal-score');
     scoreElem.innerHTML = `
         <h2>Test Complete!</h2>
-        <div style="font-size:1.3rem;margin-bottom:10px;"><strong>WPM:</strong> ${wpm} | <strong>Accuracy:</strong> ${accuracy} | <strong>Errors:</strong> ${errors}</div>
+        <div style="font-size:1.3rem;margin-bottom:10px;"><strong>WPM:</strong> ${wpm} | <strong>Accuracy:</strong> ${accuracy}% | <strong>Errors:</strong> ${errors}</div>
         <div style="margin-top:10px;font-size:0.9rem;opacity:0.7;">Press Enter to play again, Escape to return to menu</div>
     `;
     modal.style.display = 'block';
@@ -3213,40 +3239,11 @@ showResultsModal() {
             endTest() {
                 this.isTyping = false;
                 clearInterval(this.interval);
-                
                 const input = document.getElementById('typing-input');
                 input.disabled = true;
-
-                const timeElapsed = (Date.now() - this.startTime) / 1000 / 60;
-                const words = Math.max(this.correctChars / 5, 0);
-                const wpm = timeElapsed > 0 ? Math.round(words / timeElapsed) : 0;
-                const accuracy = this.totalChars > 0 ? Math.round((this.correctChars / this.totalChars) * 100) : 100;
-
-                const duration = parseInt(document.getElementById('typing-duration').value);
-                const diffStats = gameStats.data.typing[duration];
-                const overallStats = gameStats.data.typing.overall;
-                const timePlayed = Date.now() - this.startTime;
-
-                gameStats.updateGame('typing', {
-                    difficulty: {
-                        gamesPlayed: diffStats.gamesPlayed + 1,
-                        bestWPM: Math.max(diffStats.bestWPM, wpm),
-                        bestAccuracy: Math.max(diffStats.bestAccuracy, accuracy),
-                        totalTime: diffStats.totalTime + timePlayed,
-                        tests: [...diffStats.tests.slice(-19), { wpm, accuracy }]
-                    },
-                    overall: {
-                        gamesPlayed: overallStats.gamesPlayed + 1,
-                        bestWPM: Math.max(overallStats.bestWPM, wpm),
-                        bestAccuracy: Math.max(overallStats.bestAccuracy, accuracy),
-                        totalTime: overallStats.totalTime + timePlayed,
-                        tests: [...overallStats.tests.slice(-19), { wpm, accuracy }]
-                    },
-                    timePlayed: timePlayed
-                }, duration);
-
+                this.endTime = Date.now();
+                this.showResultsModal();
                 this.playSound(523.25, 0.5);
-                gameModal.show('⌨️ Test Complete!', `WPM: ${wpm}<br>Accuracy: ${accuracy}%<br>Errors: ${this.errors}`, 'typing', this);
             }
 
             reset() {
