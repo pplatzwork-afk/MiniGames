@@ -2072,7 +2072,10 @@
                 }
                 // Show top 3 scores for Snake (with date if available)
                 let scoresArr = [];
-                if (Array.isArray(stats.tests) && stats.tests.length > 0) {
+                if (gameName.toLowerCase() === 'typing' && Array.isArray(stats.tests) && stats.tests.length > 0) {
+                    // For Typing, show top WPMs from tests array
+                    scoresArr = stats.tests.map(t => t.wpm).filter(wpm => typeof wpm === 'number');
+                } else if (Array.isArray(stats.tests) && stats.tests.length > 0) {
                     scoresArr = [...stats.tests];
                 } else if (Array.isArray(stats.levels) && stats.levels.length > 0) {
                     scoresArr = [...stats.levels];
@@ -2086,6 +2089,7 @@
                     if (statKey === 'bestWPM') return `${s} WPM`;
                     if (statKey === 'bestMoves') return `${s} moves`;
                     if (statKey === 'highLevel') return `Level ${s}`;
+                    if (gameName.toLowerCase() === 'typing') return `${s} WPM`;
                     return s;
                 }).join('<br>');
                 html += `
